@@ -1,0 +1,16 @@
+[package]
+name = "nanocl-get-started"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "nanocl-get-started"
+test = true
+bench = false
+path = "src/main.rs"
+
+[dependencies]
+ntex = { version = "0.7.9", features = ["tokio"] }
+serde = { version = "1.0.192", features = ["derive"] }
