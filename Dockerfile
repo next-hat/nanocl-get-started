@@ -1,5 +1,5 @@
 # stage 1 - Setup cargo-chef
-FROM --platform=$BUILDPLATFORM rust:1.73.0-alpine3.17 as planner
+FROM --platform=$BUILDPLATFORM rust:1.74.0-alpine3.17 as planner
 
 WORKDIR /app
 RUN apk add gcc g++ make
@@ -9,7 +9,7 @@ COPY ./Cargo.lock ./Cargo.lock
 RUN cargo chef prepare --recipe-path recipe.json
 
 # state 2 - Cook our dependencies
-FROM --platform=$BUILDPLATFORM rust:1.73.0-alpine3.17 as cacher
+FROM --platform=$BUILDPLATFORM rust:1.74.0-alpine3.17 as cacher
 
 WORKDIR /app
 COPY --from=planner /usr/local/cargo/bin/cargo-chef /usr/local/cargo/bin/cargo-chef
@@ -20,14 +20,14 @@ RUN export ARCH=$(uname -m) \
   && cargo chef cook --release --target=$ARCH-unknown-linux-musl --recipe-path recipe.json
 
 # stage 3 - Build our project
-FROM rust:1.73.0-alpine3.17 as builder
+FROM --platform=$BUILDPLATFORM rust:1.74.0-alpine3.17 as builder
 
 ## Build our metrs daemon binary
 WORKDIR /app
 COPY --from=cacher /usr/local/cargo /usr/local/cargo
 COPY --from=cacher /app .
 COPY ./src ./src
-RUN apk add musl-dev  git upx
+RUN apk add musl-dev git upx
 ENV RUSTFLAGS="-C target-feature=+crt-static"
 RUN export ARCH=$(uname -m) \
   && cargo build --release --target=$ARCH-unknown-linux-musl
@@ -38,13 +38,15 @@ RUN export ARCH=$(uname -m) \
   && cp /app/target/$ARCH-unknown-linux-musl/release/nanocl-get-started /bin/nanocl-get-started
 
 # stage 4 - Create runtime image
-FROM scratch
+FROM --platform=$BUILDPLATFORM scratch
 
 ## Copy the binary
 COPY --from=builder /bin/nanocl-get-started /bin/nanocl-get-started
 
 LABEL org.opencontainers.image.source https://github.com/nxthat/nanocl-get-started
 LABEL org.opencontainers.image.description Nanocl get started image
+
+EXPOSE 9000
 
 ## Set entrypoint
 ENTRYPOINT ["/bin/nanocl-get-started"]
